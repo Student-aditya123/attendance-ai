@@ -1,0 +1,179 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+
+    // ── Start everything ────────────────────────────────────────────────────
+    {
+      "label":          "🚀 Start All Services",
+      "type":           "shell",
+      "command":        "npm run dev",
+      "isBackground":   true,
+      "group":          { "kind": "build", "isDefault": true },
+      "presentation":   { "reveal": "always", "panel": "new", "group": "services" },
+      "problemMatcher": []
+    },
+
+    // ── Individual services ─────────────────────────────────────────────────
+    {
+      "label":          "▶ Backend (Node.js :3000)",
+      "type":           "shell",
+      "command":        "cd backend && npm run dev",
+      "isBackground":   true,
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "dedicated", "group": "services" },
+      "problemMatcher": {
+        "pattern":    { "regexp": "." },
+        "background": { "activeOnStart": true, "beginsPattern": "Starting", "endsPattern": "Server running" }
+      }
+    },
+    {
+      "label":          "▶ Frontend (React :5173)",
+      "type":           "shell",
+      "command":        "cd frontend && npm run dev",
+      "isBackground":   true,
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "dedicated", "group": "services" },
+      "problemMatcher": {
+        "pattern":    { "regexp": "." },
+        "background": { "activeOnStart": true, "beginsPattern": "VITE", "endsPattern": "Local:" }
+      }
+    },
+    {
+      "label":          "▶ AI Service (FastAPI :8000)",
+      "type":           "shell",
+      "command":        "cd ai-service && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+      "isBackground":   true,
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "dedicated", "group": "services" },
+      "problemMatcher": {
+        "pattern":    { "regexp": "." },
+        "background": { "activeOnStart": true, "beginsPattern": "INFO", "endsPattern": "Application startup complete" }
+      }
+    },
+
+    // ── Database ─────────────────────────────────────────────────────────────
+    {
+      "label":          "🍃 Start MongoDB",
+      "type":           "shell",
+      "command":        "mongod --dbpath ${userHome}/data/db --logpath ${userHome}/data/db/mongod.log --fork",
+      "group":          "build",
+      "presentation":   { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label":          "🔴 Start Redis",
+      "type":           "shell",
+      "command":        "redis-server --daemonize yes --loglevel warning",
+      "group":          "build",
+      "presentation":   { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": []
+    },
+
+    // ── Seeding ──────────────────────────────────────────────────────────────
+    {
+      "label":          "🌱 Seed Database (demo data)",
+      "type":           "shell",
+      "command":        "npm run seed",
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label":          "🌱 Seed Database (reset + reseed)",
+      "type":           "shell",
+      "command":        "npm run seed:reset",
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+
+    // ── Testing ──────────────────────────────────────────────────────────────
+    {
+      "label":          "🧪 Run Backend Tests",
+      "type":           "shell",
+      "command":        "cd backend && npm test",
+      "group":          { "kind": "test", "isDefault": true },
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label":          "🧪 Run AI Service Tests",
+      "type":           "shell",
+      "command":        "cd ai-service && pytest tests/ -v --tb=short",
+      "group":          "test",
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label":          "🎭 Run E2E Tests (Playwright)",
+      "type":           "shell",
+      "command":        "npx playwright test --config e2e/playwright.config.js --reporter=list",
+      "group":          "test",
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label":          "🎭 Open Playwright UI",
+      "type":           "shell",
+      "command":        "npx playwright test --config e2e/playwright.config.js --ui",
+      "group":          "test",
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+
+    // ── AI Model ─────────────────────────────────────────────────────────────
+    {
+      "label":          "🤖 Train Risk Model",
+      "type":           "shell",
+      "command":        "npm run train:model",
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+
+    // ── Docker ───────────────────────────────────────────────────────────────
+    {
+      "label":          "🐳 Docker Compose Up (full stack)",
+      "type":           "shell",
+      "command":        "docker-compose up -d && docker-compose logs -f",
+      "isBackground":   true,
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label":          "🐳 Docker Compose Down",
+      "type":           "shell",
+      "command":        "docker-compose down",
+      "group":          "build",
+      "presentation":   { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": []
+    },
+
+    // ── Utilities ────────────────────────────────────────────────────────────
+    {
+      "label":          "💚 Health Check",
+      "type":           "shell",
+      "command":        "node scripts/health-check.js",
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label":          "🔧 Setup Project (first time)",
+      "type":           "shell",
+      "command":        "node scripts/setup.js",
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label":          "📦 Install All Dependencies",
+      "type":           "shell",
+      "command":        "npm run install:all && pip3 install -r ai-service/requirements.txt --break-system-packages",
+      "group":          "build",
+      "presentation":   { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    }
+  ]
+}

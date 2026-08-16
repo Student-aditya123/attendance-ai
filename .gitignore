@@ -1,0 +1,116 @@
+# ── Node.js ───────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+dist/
+build/
+coverage/
+.nyc_output/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+ENV/
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.log
+
+# ── Environment & secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# KEEP .env.example files (they show what values are needed without exposing secrets)
+!.env.example
+
+# ── ML model artifacts (large binary files — store in S3, not git) ─────────
+ai-service/models/risk_model.joblib
+ai-service/models/*.joblib
+ai-service/models/*.pkl
+ai-service/data/
+ai-service/.weights/
+
+# ── Database ──────────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+data/db/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.docker/
+
+# ── Terraform ─────────────────────────────────────────────────────────────────
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+*.tfplan
+infra/terraform/environments/prod/terraform.tfvars   # contains real values
+!infra/terraform/environments/prod/terraform.tfvars.example
+
+# ── VS Code ───────────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+*.code-workspace
+
+# ── JetBrains IDEs ───────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+
+# ── OS artifacts ──────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+
+# ── Test output ───────────────────────────────────────────────────────────────
+playwright-report/
+test-results/
+e2e/playwright-report/
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
+frontend/dist/
+backend/dist/
+*.tsbuildinfo
+
+# ── SSL certificates (generate locally, never commit) ─────────────────────────
+nginx/certs/
+*.pem
+*.key
+*.crt
+*.p12

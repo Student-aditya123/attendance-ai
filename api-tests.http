@@ -1,0 +1,253 @@
+### AttendanceAI — API Test File
+### VS Code extension: REST Client (humao.rest-client)
+### Usage: click "Send Request" above any request block
+### Env variables are defined in .vscode/settings.json
+
+@baseUrl = http://localhost:3000/api
+@aiUrl   = http://localhost:8000
+
+### ══════════════════════════════════════════════════════════
+### AUTH ENDPOINTS
+### ══════════════════════════════════════════════════════════
+
+### 1. Register (student)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name":       "Test Student",
+  "email":      "teststudent@university.edu",
+  "password":   "TestPass1",
+  "role":       "student",
+  "department": "CS",
+  "rollNumber": "CS21099"
+}
+
+###
+
+### 2. Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email":    "admin@university.edu",
+  "password": "Password@123"
+}
+
+###
+
+### 3. Store the token from the login response above
+# Copy accessToken from step 2 response and paste below
+@adminToken = PASTE_ACCESS_TOKEN_HERE
+
+###
+
+### 4. Login as Faculty
+# @name loginFaculty
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email":    "faculty1@university.edu",
+  "password": "Password@123"
+}
+
+###
+
+@facultyToken = PASTE_FACULTY_TOKEN_HERE
+
+### 5. Login as Student
+# @name loginStudent
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email":    "cs21001@university.edu",
+  "password": "Password@123"
+}
+
+###
+
+@studentToken = PASTE_STUDENT_TOKEN_HERE
+
+### 6. Get my profile
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ══════════════════════════════════════════════════════════
+### CLASS MANAGEMENT
+### ══════════════════════════════════════════════════════════
+
+### 7. List all classes
+GET {{baseUrl}}/classes
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 8. Create a class
+POST {{baseUrl}}/classes
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "subjectCode":        "CS501",
+  "subjectName":        "Cloud Computing",
+  "department":         "CS",
+  "semester":           5,
+  "batch":              "A",
+  "minAttendancePct":   75,
+  "classroomLatitude":  28.7041,
+  "classroomLongitude": 77.1025,
+  "locationRadiusM":    100
+}
+
+###
+
+### ══════════════════════════════════════════════════════════
+### ATTENDANCE
+### ══════════════════════════════════════════════════════════
+
+### 9. Start QR session (faculty)
+# Replace CLASS_ID with a real class ObjectId from step 7
+POST {{baseUrl}}/attendance/sessions
+Authorization: Bearer {{facultyToken}}
+Content-Type: application/json
+
+{
+  "classId":         "PASTE_CLASS_ID_HERE",
+  "latitude":        28.7041,
+  "longitude":       77.1025,
+  "radiusMeters":    100,
+  "durationMinutes": 90
+}
+
+###
+
+### 10. Get student attendance summary
+# Replace STUDENT_ID with a real student ObjectId
+GET {{baseUrl}}/attendance/students/PASTE_STUDENT_ID_HERE/summary
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ══════════════════════════════════════════════════════════
+### ANALYTICS
+### ══════════════════════════════════════════════════════════
+
+### 11. Admin overview
+GET {{baseUrl}}/analytics/admin/overview
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 12. At-risk students
+GET {{baseUrl}}/analytics/admin/at-risk?riskLevel=warning&page=1&limit=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 13. Department stats
+GET {{baseUrl}}/analytics/admin/departments
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 14. Leaderboard
+GET {{baseUrl}}/analytics/leaderboard?limit=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ══════════════════════════════════════════════════════════
+### USER MANAGEMENT (Admin only)
+### ══════════════════════════════════════════════════════════
+
+### 15. List all students
+GET {{baseUrl}}/users?role=student&page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 16. Get user stats
+GET {{baseUrl}}/users/stats
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 17. Create a new user
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name":       "New Faculty Member",
+  "email":      "newfaculty@university.edu",
+  "password":   "Faculty@123",
+  "role":       "faculty",
+  "department": "CS",
+  "employeeId": "F099"
+}
+
+###
+
+### ══════════════════════════════════════════════════════════
+### NOTIFICATIONS
+### ══════════════════════════════════════════════════════════
+
+### 18. Send bulk alert to at-risk students
+POST {{baseUrl}}/notifications/bulk-alert
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "riskLevel": "warning",
+  "channel":   "email"
+}
+
+###
+
+### ══════════════════════════════════════════════════════════
+### AI SERVICE (direct — for testing)
+### ══════════════════════════════════════════════════════════
+
+### 19. AI service health
+GET {{aiUrl}}/health
+
+###
+
+### 20. Risk prediction — single student
+POST {{aiUrl}}/predict/risk
+Content-Type: application/json
+
+{
+  "student_id":                 "6613abc000000000000011",
+  "overall_percentage":         65.0,
+  "consecutive_absences":       4,
+  "days_since_last_attendance": 6,
+  "trend_delta_4w":             -3.5,
+  "subject_records": [
+    {
+      "class_id":      "6613abc000000000000001",
+      "subject_code":  "CS301",
+      "total_classes": 24,
+      "attended":      15,
+      "percentage":    62.5,
+      "weekly_trend":  []
+    }
+  ]
+}
+
+###
+
+### 21. Model info
+GET {{aiUrl}}/predict/model/info
+
+###
+
+### 22. Health check (backend)
+GET http://localhost:3000/health
+
+###

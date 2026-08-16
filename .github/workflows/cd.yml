@@ -1,0 +1,252 @@
+# .github/workflows/cd.yml
+#
+# Continuous Deployment — triggers only after CI passes on the main branch.
+#
+# Deploy sequence:
+#   1. Download frontend artifact built by CI
+#   2. Sync to S3 + CloudFront invalidation (zero-downtime, CDN push)
+#   3. Update ECS task definition (backend) with new image SHA
+#   4. ECS rolling update — new tasks launch, old tasks drain connections
+#   5. Update ECS task definition (AI service)
+#   6. Smoke tests — hit /health on all services
+#   7. Slack notification (success or failure)
+#
+# OIDC instead of long-lived keys:
+#   GitHub Actions federates with AWS via OIDC. No AWS_ACCESS_KEY_ID stored.
+#   IAM role "github-actions-deploy" grants only the minimum permissions needed:
+#     ecs:UpdateService, ecs:RegisterTaskDefinition,
+#     ecr:GetAuthorizationToken, s3:PutObject, cloudfront:CreateInvalidation
+
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+env:
+  AWS_REGION:       us-east-1
+  ECR_REGISTRY:     ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  ECS_CLUSTER:      attendance-cluster
+  BACKEND_SERVICE:  attendance-backend-svc
+  AI_SERVICE_NAME:  attendance-ai-svc
+  CF_DIST_ID:       ${{ secrets.CLOUDFRONT_DIST_ID }}
+  S3_BUCKET:        ${{ secrets.FRONTEND_S3_BUCKET }}
+
+jobs:
+  # Gate: only deploy if CI succeeded
+  check-ci:
+    name: "Check CI Status"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - run: echo "CI passed — proceeding to deployment"
+
+  # ── Deploy frontend to S3 + CloudFront ───────────────────────────────────────
+  deploy-frontend:
+    name: "Deploy Frontend → S3 + CloudFront"
+    runs-on: ubuntu-latest
+    needs: check-ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Download frontend artifact
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow:      ci.yml
+          workflow_conclusion: success
+          name:          frontend-dist-*
+          path:          frontend/dist/
+
+      - name: Sync to S3
+        run: |
+          # Long-cache assets (hashed filenames — Vite content-hash)
+          aws s3 sync frontend/dist/ s3://${{ env.S3_BUCKET }}/ \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "*.html"
+
+          # HTML files — no cache (always fetch latest)
+          aws s3 sync frontend/dist/ s3://${{ env.S3_BUCKET }}/ \
+            --delete \
+            --cache-control "no-cache,no-store,must-revalidate" \
+            --include "*.html"
+
+      - name: Invalidate CloudFront (HTML files only — assets are hashed)
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CF_DIST_ID }} \
+            --paths "/*.html" "/index.html"
+
+  # ── Deploy backend to ECS ─────────────────────────────────────────────────────
+  deploy-backend:
+    name: "Deploy Backend → ECS"
+    runs-on: ubuntu-latest
+    needs: check-ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Get image tag from CI
+        id: image
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          echo "tag=${{ env.ECR_REGISTRY }}/attendance-backend:sha-${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition attendance-backend \
+            --query taskDefinition \
+            > infra/ecs/backend-task-def.json
+
+      - name: Update image in task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: infra/ecs/backend-task-def.json
+          container-name:  attendance-backend
+          image:           ${{ steps.image.outputs.tag }}
+
+      - name: Deploy to ECS (rolling update)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition:          ${{ steps.task-def.outputs.task-definition }}
+          service:                  ${{ env.BACKEND_SERVICE }}
+          cluster:                  ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          # Rolling update: minimum 50% healthy, maximum 200% during deployment
+          # Drains old tasks after new ones pass health checks
+
+  # ── Deploy AI service to ECS ──────────────────────────────────────────────────
+  deploy-ai:
+    name: "Deploy AI Service → ECS"
+    runs-on: ubuntu-latest
+    needs: check-ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Get image tag
+        id: image
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          echo "tag=${{ env.ECR_REGISTRY }}/attendance-ai:sha-${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition attendance-ai \
+            --query taskDefinition \
+            > infra/ecs/ai-task-def.json
+
+      - name: Update image in task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: infra/ecs/ai-task-def.json
+          container-name:  attendance-ai
+          image:           ${{ steps.image.outputs.tag }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition:          ${{ steps.task-def.outputs.task-definition }}
+          service:                  ${{ env.AI_SERVICE_NAME }}
+          cluster:                  ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+  # ── Smoke tests ───────────────────────────────────────────────────────────────
+  smoke-tests:
+    name: "Smoke Tests"
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend, deploy-backend, deploy-ai]
+
+    steps:
+      - name: Wait for DNS propagation
+        run: sleep 15
+
+      - name: Backend health check
+        run: |
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+            https://api.attendance.university.edu/health)
+          echo "Backend status: $STATUS"
+          [ "$STATUS" = "200" ] || (echo "Backend health check failed!" && exit 1)
+
+      - name: AI service health check
+        run: |
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+            https://api.attendance.university.edu/ai/health)
+          echo "AI service status: $STATUS"
+          [ "$STATUS" = "200" ] || (echo "AI service health check failed!" && exit 1)
+
+      - name: Frontend reachability check
+        run: |
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+            https://attendance.university.edu)
+          echo "Frontend status: $STATUS"
+          [ "$STATUS" = "200" ] || (echo "Frontend check failed!" && exit 1)
+
+      - name: Auth endpoint smoke test
+        run: |
+          RESPONSE=$(curl -sf -X POST \
+            https://api.attendance.university.edu/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"smoke@test.invalid","password":"test"}' \
+            -w "\n%{http_code}")
+          STATUS=$(echo "$RESPONSE" | tail -1)
+          echo "Auth endpoint status: $STATUS (expected 401)"
+          [ "$STATUS" = "401" ] || (echo "Auth endpoint returning unexpected status!" && exit 1)
+
+  # ── Notify ────────────────────────────────────────────────────────────────────
+  notify:
+    name: "Slack Notification"
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: needs.smoke-tests.result == 'success'
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: |
+            ✅ *AttendanceAI deployed successfully*
+            Branch: `main` | SHA: `${{ github.sha }}`
+            Backend: ✓ | AI Service: ✓ | Frontend: ✓
+            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Notify failure
+        if: needs.smoke-tests.result != 'success'
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: |
+            🔴 *AttendanceAI deployment FAILED*
+            Branch: `main` | SHA: `${{ github.sha }}`
+            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

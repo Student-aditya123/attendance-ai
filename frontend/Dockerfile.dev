@@ -1,0 +1,35 @@
+# frontend/Dockerfile.dev
+#
+# Development-only Dockerfile for the React frontend.
+# Runs the Vite dev server with Hot Module Replacement (HMR).
+#
+# Why not just use `npm run dev` on the host?
+#   Running inside Docker ensures every dev gets identical Node/npm versions
+#   and avoids "works on my machine" issues with native modules.
+#
+# HMR note:
+#   Vite HMR uses WebSocket on a separate port (24678 by default).
+#   We expose it alongside 5173 so browser-side HMR reconnects work
+#   even inside Docker Compose networking.
+#
+# Volume mount (in docker-compose.yml):
+#   ./frontend/src:/app/src:rw   ← source changes trigger HMR instantly
+#   /app/node_modules            ← anonymous volume prevents host overwrite
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install deps first (layer-cached unless package.json changes)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy the rest of the project
+COPY . .
+
+# Expose Vite dev server + HMR WebSocket
+EXPOSE 5173
+EXPOSE 24678
+
+# --host binds to 0.0.0.0 so Docker port mapping works
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

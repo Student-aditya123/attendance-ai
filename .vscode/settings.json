@@ -1,0 +1,133 @@
+{
+  // ── Editor ───────────────────────────────────────────────────────────────────
+  "editor.tabSize":             2,
+  "editor.insertSpaces":        true,
+  "editor.formatOnSave":        true,
+  "editor.formatOnPaste":       false,
+  "editor.wordWrap":            "on",
+  "editor.rulers":              [100],
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.minimap.enabled":     false,
+  "editor.suggestSelection":    "first",
+  "editor.linkedEditing":       true,   // rename JSX open/close tag together
+
+  // ── File handling ─────────────────────────────────────────────────────────────
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline":     true,
+  "files.exclude": {
+    "**/node_modules":     true,
+    "**/__pycache__":      true,
+    "**/.pytest_cache":    true,
+    "**/dist":             false,         // keep visible for debugging
+    "**/.terraform":       true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**":         true,
+    "**/.git/**":         true
+  },
+  "files.associations": {
+    "*.env.example": "dotenv",
+    "*.env":         "dotenv",
+    "Dockerfile*":   "dockerfile",
+    "*.tf":          "terraform"
+  },
+
+  // ── Language-specific formatters ──────────────────────────────────────────────
+  "[javascript]": {
+    "editor.defaultFormatter":    "esbenp.prettier-vscode",
+    "editor.formatOnSave":        true
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter":    "esbenp.prettier-vscode",
+    "editor.formatOnSave":        true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter":    "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter":    "esbenp.prettier-vscode"
+  },
+  "[python]": {
+    "editor.defaultFormatter":    "ms-python.black-formatter",
+    "editor.formatOnSave":        true,
+    "editor.tabSize":             4
+  },
+  "[json]": {
+    "editor.defaultFormatter":    "esbenp.prettier-vscode"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter":    "redhat.vscode-yaml"
+  },
+  "[markdown]": {
+    "editor.formatOnSave":        false,
+    "editor.wordWrap":            "on"
+  },
+
+  // ── Prettier ─────────────────────────────────────────────────────────────────
+  "prettier.singleQuote":       true,
+  "prettier.semi":              true,
+  "prettier.trailingComma":     "es5",
+  "prettier.printWidth":        100,
+  "prettier.arrowParens":       "always",
+
+  // ── ESLint ───────────────────────────────────────────────────────────────────
+  "eslint.workingDirectories":  ["./backend", "./frontend"],
+  "eslint.validate":            ["javascript", "javascriptreact"],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint":     "explicit"
+  },
+
+  // ── Python ───────────────────────────────────────────────────────────────────
+  "python.defaultInterpreterPath":   "${workspaceFolder}/ai-service/.venv/bin/python",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.terminal.activateEnvironment": true,
+  "python.testing.pytestEnabled":    true,
+  "python.testing.pytestArgs":       ["ai-service/tests"],
+  "python.testing.cwd":              "${workspaceFolder}/ai-service",
+  "ruff.lint.args":                  ["--config", "${workspaceFolder}/ai-service/pyproject.toml"],
+
+  // ── Tailwind ─────────────────────────────────────────────────────────────────
+  "tailwindCSS.rootFontSize":         16,
+  "tailwindCSS.includeLanguages": {
+    "javascript":      "javascript",
+    "javascriptreact": "javascript"
+  },
+
+  // ── MongoDB ───────────────────────────────────────────────────────────────────
+  "mongodb.connectionSaving.defaultConnectionSavingLocation": "Workspace",
+
+  // ── Git ───────────────────────────────────────────────────────────────────────
+  "git.autofetch":              true,
+  "git.confirmSync":            false,
+  "gitlens.hovers.currentLine.over": "line",
+
+  // ── Terminal ──────────────────────────────────────────────────────────────────
+  "terminal.integrated.defaultProfile.linux":  "bash",
+  "terminal.integrated.defaultProfile.osx":    "zsh",
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "terminal.integrated.env.osx": {
+    "PATH": "${workspaceFolder}/ai-service/.venv/bin:${env:PATH}"
+  },
+  "terminal.integrated.env.linux": {
+    "PATH": "${workspaceFolder}/ai-service/.venv/bin:${env:PATH}"
+  },
+
+  // ── REST Client ───────────────────────────────────────────────────────────────
+  "rest-client.environmentVariables": {
+    "$shared": {
+      "baseUrl":        "http://localhost:3000/api",
+      "aiUrl":          "http://localhost:8000"
+    }
+  },
+
+  // ── Search ────────────────────────────────────────────────────────────────────
+  "search.exclude": {
+    "**/node_modules":  true,
+    "**/dist":          true,
+    "**/__pycache__":   true,
+    "**/coverage":      true,
+    "**/.terraform":    true
+  }
+}

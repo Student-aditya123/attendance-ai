@@ -1,0 +1,134 @@
+/* index.css — Global styles */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Custom properties (shared across all pages) ──────────────────────────── */
+:root {
+  /* Colours — dark theme */
+  --c-bg:      #07090f;
+  --c-surface: #0f1520;
+  --c-raised:  #141e2e;
+  --c-rim:     #1c2840;
+  --c-rim-bri: #253656;
+  --c-blue:    #3d7fff;
+  --c-green:   #00c48c;
+  --c-red:     #ff4d6d;
+  --c-amber:   #ffb020;
+  --c-purple:  #9d6fff;
+  --c-ink:     #c8d6f0;
+  --c-dim:     #5a7098;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--c-surface); }
+::-webkit-scrollbar-thumb { background: var(--c-rim); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-rim-bri); }
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Typography helpers ──────────────────────────────────────────────────── */
+.font-space { font-family: 'Space Grotesk', system-ui, sans-serif; }
+.font-mono  { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Global animations ───────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes spin    { to   { transform: rotate(360deg); } }
+@keyframes blink   { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes scanLine {
+  0%   { top: -2px; }
+  100% { top: 100%; }
+}
+@keyframes pulseRing {
+  0%, 100% { transform: scale(1);    opacity: 0.6; }
+  50%       { transform: scale(1.15); opacity: 0.1; }
+}
+
+.animate-fade-up    { animation: fadeUp  0.32s ease both; }
+.animate-fade-in    { animation: fadeIn  0.22s ease both; }
+.animate-slide-in   { animation: slideIn 0.28s ease both; }
+.animate-spin-slow  { animation: spin    0.7s linear infinite; }
+
+/* ── Focus-visible ring ──────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--c-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Input base (used across pages) ────────────────────────────────────────── */
+.input {
+  background: var(--c-raised);
+  border: 1px solid var(--c-rim);
+  color: var(--c-ink);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+.input:focus {
+  border-color: var(--c-blue);
+  box-shadow: 0 0 0 3px rgba(61, 127, 255, 0.13);
+}
+.input::placeholder { color: #2d3f58; }
+
+/* ── Card variants ──────────────────────────────────────────────────────── */
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-rim);
+  border-radius: 12px;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--c-rim-bri); }
+
+.card-raised {
+  background: var(--c-raised);
+  border: 1px solid var(--c-rim);
+  border-radius: 10px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.18s;
+}
+.btn-primary { background: var(--c-blue); color: #fff; }
+.btn-primary:hover { background: #5590ff; box-shadow: 0 0 16px rgba(61,127,255,0.3); }
+.btn-ghost { background: transparent; color: var(--c-dim); border: 1px solid var(--c-rim); }
+.btn-ghost:hover { background: var(--c-raised); color: var(--c-ink); border-color: var(--c-rim-bri); }
+.btn-danger { background: var(--c-red); color: #fff; }
+.btn-danger:hover { background: #ff6b82; }
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.risk-bar { height: 6px; border-radius: 3px; overflow: hidden; background: var(--c-rim); }
+.risk-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }

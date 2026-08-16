@@ -1,0 +1,62 @@
+{
+  "recommendations": [
+    // ── JavaScript / Node.js ──────────────────────────────────────────────────
+    "dbaeumer.vscode-eslint",           // ESLint — inline lint errors in the editor
+    "esbenp.prettier-vscode",           // Prettier — auto-format on save
+    "christian-kohler.npm-intellisense",// Auto-complete npm imports
+    "ms-vscode.vscode-typescript-next", // Better JS/TS language support
+
+    // ── React ─────────────────────────────────────────────────────────────────
+    "dsznajder.es7-react-js-snippets",  // rafce, useState shortcuts
+    "formulahendry.auto-rename-tag",    // rename JSX closing tag automatically
+    "burkeholland.simple-react-snippets",
+
+    // ── Python / AI Service ───────────────────────────────────────────────────
+    "ms-python.python",                 // Python language support (REQUIRED)
+    "ms-python.debugpy",                // Python debugging (REQUIRED for launch.json)
+    "ms-python.black-formatter",        // Black auto-formatter
+    "ms-python.pylint",                 // Pylint linting
+    "charliermarsh.ruff",               // Ruff — fast Python linter
+    "ms-toolsai.jupyter",               // Jupyter notebooks (useful for ML analysis)
+
+    // ── Docker ────────────────────────────────────────────────────────────────
+    "ms-azuretools.vscode-docker",      // Docker file syntax + container management
+    "ms-vscode-remote.remote-containers",// Dev containers support
+
+    // ── Database ──────────────────────────────────────────────────────────────
+    "mongodb.mongodb-vscode",           // MongoDB Compass in VS Code — browse collections
+    "cweijan.vscode-redis-client",      // Redis client — inspect keys live
+
+    // ── REST API testing ──────────────────────────────────────────────────────
+    "humao.rest-client",                // .http files — test API endpoints inline
+    "rangav.vscode-thunder-client",     // Postman-like GUI inside VS Code
+
+    // ── Git ───────────────────────────────────────────────────────────────────
+    "eamodio.gitlens",                  // Blame, history, PR review
+    "mhutchie.git-graph",               // Visual git graph
+
+    // ── Terraform ────────────────────────────────────────────────────────────
+    "hashicorp.terraform",              // HCL syntax, autocomplete, validation
+
+    // ── Tailwind CSS ──────────────────────────────────────────────────────────
+    "bradlc.vscode-tailwindcss",        // Tailwind class autocomplete + hover preview
+
+    // ── YAML / JSON / Config ──────────────────────────────────────────────────
+    "redhat.vscode-yaml",               // GitHub Actions, docker-compose YAML
+    "yzhang.markdown-all-in-one",       // README.md preview + shortcuts
+    "zxh404.vscode-proto3",             // Proto3 (future gRPC support)
+
+    // ── Productivity ──────────────────────────────────────────────────────────
+    "PKief.material-icon-theme",        // File icons that match our folder structure
+    "zhuangtongfa.material-theme",      // Dark theme matching the dashboard design
+    "oderwat.indent-rainbow",           // Coloured indentation — helps with Python
+    "wayou.vscode-todo-highlight",      // Highlight TODO / FIXME comments
+    "streetsidesoftware.code-spell-checker", // Catch typos in comments/strings
+
+    // ── Testing ───────────────────────────────────────────────────────────────
+    "ms-playwright.playwright",         // Playwright Test Explorer in VS Code sidebar
+
+    // ── Environment files ─────────────────────────────────────────────────────
+    "mikestead.dotenv"                  // .env file syntax highlighting
+  ]
+}

@@ -1,0 +1,131 @@
+version: '3.9'
+
+# ─── Shared network ─────────────────────────────────────────────────────────────
+networks:
+  app-network:
+    driver: bridge
+
+# ─── Named volumes ───────────────────────────────────────────────────────────────
+volumes:
+  mongo-data:
+  redis-data:
+
+services:
+
+  # ── MongoDB ───────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0-jammy
+    container_name: attendance-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: attendance_db
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ──────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: attendance-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Node.js Backend API ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: attendance-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV:            development
+      PORT:                3000
+      MONGO_URI:           mongodb://mongodb:27017/attendance_db
+      REDIS_URL:           redis://redis:6379
+      JWT_ACCESS_SECRET:   dev-access-secret-change-in-prod-must-be-32-chars
+      JWT_REFRESH_SECRET:  dev-refresh-secret-change-in-prod-must-be-32-chars
+      AI_SERVICE_URL:      http://ai-service:8000
+      FRONTEND_URL:        http://localhost:5173
+      ALLOWED_ORIGINS:     http://localhost:5173
+      QR_TOKEN_TTL_SECS:   45
+      QR_LOCATION_RADIUS:  100
+      MIN_ATTENDANCE_PCT:  75
+      BCRYPT_ROUNDS:       10       # lower for dev speed
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      - ./backend/src:/app/src:ro   # hot-reload in dev (read-only mount of src)
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Python AI Microservice ─────────────────────────────────────────────────────
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: attendance-ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URI:        mongodb://mongodb:27017/attendance_db
+      AWS_REGION:       us-east-1
+      AWS_BUCKET_NAME:  attendance-face-data
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── React Frontend (dev server) ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: attendance-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL:  http://localhost:3000/api
+      VITE_WS_URL:   ws://localhost:3000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    volumes:
+      - ./frontend/src:/app/src:rw   # hot module replacement
