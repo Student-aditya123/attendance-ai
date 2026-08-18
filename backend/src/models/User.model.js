@@ -39,8 +39,8 @@ const userSchema = new mongoose.Schema(
       default: 'student',
     },
     department:   { type: String, trim: true },
-    rollNumber:   { type: String, trim: true, sparse: true },   // students only
-    employeeId:   { type: String, trim: true, sparse: true },   // faculty/admin only
+    rollNumber:   { type: String, trim: true },   // students only
+    employeeId:   { type: String, trim: true },   // faculty/admin only
     phone:        { type: String, trim: true },
 
     // Face recognition
@@ -72,9 +72,10 @@ const userSchema = new mongoose.Schema(
 );
 
 // ── Indexes ────────────────────────────────────────────────────────────────────
-userSchema.index({ email: 1 }, { unique: true });
+// Note: email index is automatically handled by `unique: true` above.
 userSchema.index({ role: 1, department: 1 });
 userSchema.index({ rollNumber: 1 }, { sparse: true });
+userSchema.index({ employeeId: 1 }, { sparse: true });
 
 // ── Pre-save hook: hash password before storing ───────────────────────────────
 userSchema.pre('save', async function (next) {
