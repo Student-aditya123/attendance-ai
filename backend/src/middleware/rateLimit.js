@@ -12,12 +12,13 @@
  *   • aiService  — 20  req / min  per user  (face recognition is expensive)
  */
 const rateLimit = require('express-rate-limit');
-const RedisStore = require('rate-limit-redis');
+const { RedisStore } = require('rate-limit-redis');
 const { redis }  = require('../config/redis');
 
 function makeStore(prefix) {
   return new RedisStore({
-    sendCommand: (...args) => redis.call(...args),
+    // sendCommand: (...args) => redis.call(...args),
+       sendCommand: (...args) => redisClient.sendCommand(args),
     prefix,
   });
 }
