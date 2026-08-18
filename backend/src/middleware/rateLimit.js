@@ -11,7 +11,7 @@
  *   • qrScan     — 5   req / 60 sec per user (anti-spam for QR scanning)
  *   • aiService  — 20  req / min  per user  (face recognition is expensive)
  */
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator }= require('express-rate-limit');
 const { RedisStore } = require('rate-limit-redis');
 const { redis }  = require('../config/redis');
 
@@ -43,22 +43,22 @@ const auth = rateLimit({
 });
 
 const qrScan = rateLimit({
-  windowMs:         60 * 1000,    // 1 minute
-  max:              5,
+  windowMs:         15 * 60 * 1000,    // 1 minute
+  max:              100,
   standardHeaders:  true,
   legacyHeaders:    false,
   store:            makeStore('rl:qr:'),
-  keyGenerator:     (req) => req.user?.id || req.ip,   // per-user, not per-IP
+  keyGenerator:     (req) => req.user ? req.user.id : ipKeyGenerator(req.ip),   // per-user, not per-IP
   message:          { success: false, message: 'Scanning too fast. Please wait.' },
 });
 
 const aiService = rateLimit({
-  windowMs:         60 * 1000,
-  max:              20,
+  windowMs:         15 * 60 * 1000,
+  max:              100,
   standardHeaders:  true,
   legacyHeaders:    false,
   store:            makeStore('rl:ai:'),
-  keyGenerator:     (req) => req.user?.id || req.ip,
+  keyGenerator:     (req) => req.user? req.user.id : ipKeyGenerator(req.ip),
   message:          { success: false, message: 'Face recognition limit reached. Please wait.' },
 });
 
