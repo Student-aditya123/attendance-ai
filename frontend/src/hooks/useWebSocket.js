@@ -19,35 +19,41 @@
  *   useEffect(() => { joinSession(sessionId); return () => leaveSession(sessionId); }, []);
  *   onAttendance((data) => setCount(c => c + 1));
  */
+/**
+ * hooks/useWebSocket.js — Socket.io real-time connection
+ */
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { io }            from 'socket.io-client';
-import { useSelector }   from 'react-redux';
+import { io } from 'socket.io-client';
+import { useSelector } from 'react-redux';
 import { selectAccessToken, selectUser } from '../store/authSlice';
 
-const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
+// Fallback directly to backend port 5000 instead of Vite port 5173
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
 
-// Singleton socket — shared across all hook instances
 let _socket = null;
-const _subscribers = {};   // event → Set<handler>
 
 function getOrCreateSocket(token) {
-  if (_socket?.connected) return _socket;
+  if (_socket) {
+    if (_socket.auth) _socket.auth.token = token;
+    return _socket;
+  }
 
   _socket = io(WS_URL, {
-    auth:              { token },
-    transports:        ['websocket', 'polling'],
-    reconnection:      true,
+    auth: { token },
+    transports: ['websocket', 'polling'],
+    reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionDelayMax: 10_000,
+    reconnectionDelayMax: 10000,
     reconnectionAttempts: Infinity,
+    autoConnect: false, // Prevent automatic connection before explicitly requested
   });
 
   return _socket;
 }
 
 export function useWebSocket() {
-  const token   = useSelector(selectAccessToken);
-  const user    = useSelector(selectUser);
+  const token = useSelector(selectAccessToken);
+  const user = useSelector(selectUser);
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
 
@@ -58,20 +64,24 @@ export function useWebSocket() {
     const socket = getOrCreateSocket(token);
     socketRef.current = socket;
 
-    const onConnect    = ()  => setConnected(true);
-    const onDisconnect = ()  => setConnected(false);
-    const onError      = (e) => console.warn('[WS] Error:', e.message);
+    const onConnect = () => setConnected(true);
+    const onDisconnect = () => setConnected(false);
+    const onError = (e) => console.warn('[WS] Error:', e.message);
 
-    socket.on('connect',    onConnect);
+    socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.on('error',      onError);
+    socket.on('connect_error', onError);
 
-    if (!socket.connected) socket.connect();
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      setConnected(true);
+    }
 
     return () => {
-      socket.off('connect',    onConnect);
+      socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('error',      onError);
+      socket.off('connect_error', onError);
     };
   }, [token]);
 
@@ -80,6 +90,7 @@ export function useWebSocket() {
     if (!user && _socket) {
       _socket.disconnect();
       _socket = null;
+      socketRef.current = null;
       setConnected(false);
     }
   }, [user]);
@@ -93,18 +104,7 @@ export function useWebSocket() {
     socketRef.current?.emit('leave:session', sessionId);
   }, []);
 
-  // ── Event subscription factory ─────────────────────────────────────────────
-  function makeSubscriber(event) {
-    return (handler) => {
-      useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
-        socket.on(event, handler);
-        return () => socket.off(event, handler);
-      }, [handler]);
-    };
-  }
-
+  // ── Event helpers ──────────────────────────────────────────────────────────
   const onAttendanceMarked = useCallback((handler) => {
     const s = socketRef.current;
     if (!s) return () => {};
@@ -135,8 +135,12 @@ export function useWebSocket() {
 
   return {
     connected,
-    joinSession, leaveSession,
-    onAttendanceMarked, onFraudAlert, onQrRotated, onNotification,
+    joinSession,
+    leaveSession,
+    onAttendanceMarked,
+    onFraudAlert,
+    onQrRotated,
+    onNotification,
     socket: socketRef.current,
   };
 }

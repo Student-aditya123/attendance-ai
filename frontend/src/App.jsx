@@ -2,10 +2,8 @@
  * App.jsx — Root with React Router, auth bootstrap, DashboardLayout wrapper
  */
 import { useEffect, lazy, Suspense } from 'react';
-import { Provider }   from 'react-redux';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector }  from 'react-redux';
-import { store }      from './store';
 import { setTokens, fetchMeThunk, selectRole, selectIsLoggedIn, selectInitialized } from './store/authSlice';
 import { authAPI }    from './services/api';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -26,16 +24,20 @@ const Spinner = () => (
 function AuthBootstrap({ children }) {
   const dispatch    = useDispatch();
   const initialized = useSelector(selectInitialized);
+
   useEffect(() => {
     async function bootstrap() {
       try {
         const { data } = await authAPI.refresh();
         dispatch(setTokens({ accessToken: data.data.accessToken }));
         await dispatch(fetchMeThunk());
-      } catch { dispatch({ type: 'auth/setInitialized' }); }
+      } catch { 
+        dispatch({ type: 'auth/setInitialized' }); 
+      }
     }
     bootstrap();
   }, [dispatch]);
+
   if (!initialized) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#07090f' }}>
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
@@ -44,14 +46,16 @@ function AuthBootstrap({ children }) {
       </div>
     </div>
   );
+
   return children;
 }
 
 function RequireAuth({ allowedRoles, children }) {
   const isLoggedIn = useSelector(selectIsLoggedIn);
   const role       = useSelector(selectRole);
-  if (!isLoggedIn)                   return <Navigate to="/login" replace />;
-  if (!allowedRoles.includes(role))  return <Navigate to="/403"   replace />;
+
+  if (!isLoggedIn)                  return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(role)) return <Navigate to="/403"   replace />;
   return children;
 }
 
@@ -59,6 +63,7 @@ function AppRoutes() {
   const isLoggedIn = useSelector(selectIsLoggedIn);
   const role       = useSelector(selectRole);
   const home = isLoggedIn ? (role==='admin'?'/admin/dashboard':role==='faculty'?'/faculty/dashboard':'/student/dashboard') : '/login';
+
   return (
     <Suspense fallback={<Spinner/>}>
       <Routes>
@@ -85,12 +90,8 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <Provider store={store}>
-      <BrowserRouter>
-        <AuthBootstrap>
-          <AppRoutes/>
-        </AuthBootstrap>
-      </BrowserRouter>
-    </Provider>
+    <AuthBootstrap>
+      <AppRoutes/>
+    </AuthBootstrap>
   );
 }
