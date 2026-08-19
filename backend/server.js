@@ -9,24 +9,16 @@
  *   5. Attach Socket.io WebSocket server
  *   6. Start listening
  *   7. Register cron jobs
- *
- * Graceful shutdown on SIGTERM/SIGINT ensures:
- *   - No new connections accepted
- *   - Existing connections finish
- *   - DB connections closed cleanly
- *   This is critical in Kubernetes/ECS where rolling deploys send SIGTERM.
  */
 const http = require('http');
 
-require('./src/config/env');  // validate env first — crash early if broken
-
-const app = require('./src/app');
-const { connectDB, disconnectDB }    = require('./src/config/db');
-const { connectRedis }               = require('./src/config/redis');
-const { initializeWebSocket }        = require('./src/modules/notifications/websocket.service');
-const { startAnalyticsJob }          = require('./src/jobs/analyticsJob');
-const logger                         = require('./src/utils/logger');
-const env                            = require('./src/config/env');
+const env                             = require('./src/config/env'); // validate env first
+const app                             = require('./src/app');
+const { connectDB, disconnectDB }     = require('./src/config/db');
+const { redis, redisPub, redisSub, connectRedis } = require('./src/config/redis');
+const { initializeWebSocket }         = require('./src/modules/notifications/websocket.service');
+const { startAnalyticsJob }           = require('./src/jobs/analyticsJob');
+const logger                          = require('./src/utils/logger');
 
 const server = http.createServer(app);
 
@@ -34,17 +26,22 @@ const server = http.createServer(app);
 initializeWebSocket(server);
 
 async function bootstrap() {
-  logger.info(`Starting attendance-api [${env.NODE_ENV}]…`);
+  try {
+    logger.info(`Starting attendance-api [${env.NODE_ENV}]…`);
 
-  await connectDB();
-  await connectRedis();
+    await connectDB();
+    await connectRedis();
 
-  server.listen(env.PORT, () => {
-    logger.info(`✅ Server running on http://0.0.0.0:${env.PORT}`);
-  });
+    server.listen(env.PORT, () => {
+      logger.info(`✅ Server running on http://0.0.0.0:${env.PORT}`);
+    });
 
-  if (env.NODE_ENV !== 'test') {
-    startAnalyticsJob();
+    if (env.NODE_ENV !== 'test') {
+      startAnalyticsJob();
+    }
+  } catch (err) {
+    logger.error('Failed to start server:', err);
+    process.exit(1);
   }
 }
 
@@ -54,9 +51,19 @@ async function gracefulShutdown(signal) {
 
   server.close(async () => {
     logger.info('HTTP server closed');
-    await disconnectDB();
-    logger.info('All connections closed. Exiting.');
-    process.exit(0);
+    try {
+      await disconnectDB();
+      await Promise.allSettled([
+        redis.quit(),
+        redisPub.quit(),
+        redisSub.quit(),
+      ]);
+      logger.info('All DB and Redis connections closed. Exiting.');
+      process.exit(0);
+    } catch (err) {
+      logger.error('Error during graceful cleanup:', err);
+      process.exit(1);
+    }
   });
 
   // Force exit after 30s if graceful shutdown hangs

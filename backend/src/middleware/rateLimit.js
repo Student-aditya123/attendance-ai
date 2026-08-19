@@ -11,15 +11,15 @@
  *   • qrScan     — 5   req / 60 sec per user (anti-spam for QR scanning)
  *   • aiService  — 20  req / min  per user  (face recognition is expensive)
  */
-const redisClient = require('../config/redis');
+// const redisClient = require('../config/redis');
 const { rateLimit, ipKeyGenerator }= require('express-rate-limit');
 const { RedisStore } = require('rate-limit-redis');
 const { redis }  = require('../config/redis');
 
 function makeStore(prefix) {
   return new RedisStore({
-    // sendCommand: (...args) => redis.call(...args),
-       sendCommand: (...args) => redisClient.sendCommand(args),
+    sendCommand: (...args) => redis.call(...args),
+      //  sendCommand: (...args) => redisClient.sendCommand(args),
     prefix,
   });
 }
